@@ -183,7 +183,8 @@ def get_shards_for_chunk(num_samples, chunk, path, shard_shuffle_seed):
 
 def enough_shards(shard_lists: List[List[str]], min_shards_needed: int):
     for sl in shard_lists:
-        if len(sl) < min_shards_needed:
+        # make sure number of shards is a multiple of min_shards_needed (i.e. workers)
+        if len(sl) < min_shards_needed or len(sl) % min_shards_needed > 0: 
             return False
     return True
 
@@ -415,9 +416,9 @@ def _single_epoch_string(
     assert len(weights) == num_sources, "One weight is needed per source."
 
     needed_samples_per_source = [int(np.ceil(weights[i] * num_samples / sum(weights))) for i in range(num_sources)]
-
+    
     manifests = [get_metadata_file(path, shard_shuffle_seed=shard_shuffle_seed) for path in paths]
-
+    
     shard_strings_per_source = []
     next_shard_per_source = copy.deepcopy(starting_shard_per_source)
     shard_list_per_source = [[] for _ in range(num_sources)]
@@ -450,21 +451,6 @@ def _single_epoch_string(
                 "allow for better use of the dataset."
             )
             raise e
-
-    for i in range(num_sources):
-        # Ensure the number of shards is a multiple of number of workers, so each worker has the same
-        # number of shards.
-        #
-        # This is a heuristic to minimize how much data we discard when trying to ensure each worker has
-        # the same number of samples. Shards tend to have similar number of samples, so an extra shard
-        # in a worker will likely get discarded.
-        num_multiples = len(shard_list_per_source[i]) // total_num_workers
-
-        shard_list_per_source[i] = shard_list_per_source[i][: num_multiples * total_num_workers]
-        num_samples_per_source[i] = num_samples_per_source[i][: num_multiples * total_num_workers]
-
-        # Put back unused shards.
-        next_shard_per_source[i] = starting_shard_per_source[i] + len(shard_list_per_source[i])
 
     num_samples_per_source = [sum(n) for n in num_samples_per_source]
 
