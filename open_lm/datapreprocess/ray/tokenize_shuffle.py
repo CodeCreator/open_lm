@@ -433,7 +433,7 @@ def write_to_location(folder, tar_name, bio):
     else:
         # Create directory if it doesn't exist
         if not os.path.exists(folder):
-            os.makedirs(folder)
+            os.makedirs(folder, exist_ok=True)
 
         try:
             with open(path, "wb") as f:
@@ -496,7 +496,7 @@ def glob_files(path, suffixes):
 def write_manifest(jsonl_lines, args):
     "Write manifest to provided output path."
 
-    output_path = os.path.join(args.output.strip("/"), "manifest.jsonl")
+    output_path = os.path.join(args.output, "manifest.jsonl")
 
     if output_path.startswith("s3://"):
         # Use boto3 for S3 paths
@@ -687,7 +687,7 @@ def main(args):
         ds = ds.repartition(1)
         ds = ds.sort(key="shard")
         jsonl_lines = ds.take_all()
-        token_count_from_manifest = sum([x["num_sequences"][0] for x in jsonl_lines] * seqlen)
+        token_count_from_manifest = sum([x["num_sequences"] for x in jsonl_lines] * seqlen)
         write_manifest(jsonl_lines, args)
     else:
         write_status = ds.map_batches(
