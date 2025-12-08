@@ -44,7 +44,7 @@ class OpenLMForCausalLM(PreTrainedModel):
     """
     Extremely barebones HF model wrapper.
     """
-
+    _no_split_modules = ["Block"]
     config_class = OpenLMConfig
     base_model_prefix = "model"
 
